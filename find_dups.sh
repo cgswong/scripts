@@ -1,0 +1,78 @@
+#!/bin/bash
+# ##################################################
+# NAME: find_dups.sh
+# DESC: Find duplicate files using checksum.
+#
+# LOG:
+# yyyy/mm/dd [user] [version]: [notes]
+# 2014/11/05 cgwong v0.1.0: Initial creation.
+# #################################################
+
+# -- VARIABLES -- #
+SCRIPT=`basename $0`                                # Script name without path
+SCRIPT_PATH=$(dirname $SCRIPT)                      # Script path
+SCRIPT_NM=`echo $SCRIPT | awk -F"." '{print $1}'`   # Script name without any extension
+DT_STAMP=`date "+%Y%m%d_%H%M%S"`
+TMP_FILE=/tmp/${SCRIPT_NM}-${DT_STAMP}.tmp
+LOG_FILE=/tmp/${SCRIPT_NM}-${DT_STAMP}.log
+
+# Exit values
+EXIT_ERR=1
+EXIT_SUCC=0
+
+# -- FUNCTIONS -- #
+show_usage()
+{ # Show script usage
+echo "
+ ${SCRIPT} - Shell script to find duplicate files using checksum check.
+ The result is placed in ${LOG_FILE}.
+
+ USAGE
+ ${SCRIPT} [OPTIONS]
+
+ OPTIONS
+ -r Flag to remove the duplicates found, leaving only one original.
+
+ -h
+    Display this help screen.
+"
+}
+
+# -- MAIN -- #
+while getopts ":rh" optval "$@"; do
+  case $optval in
+    "r") # Remove duplicates, leaving one original (first)
+      RM_DUPS="Y"
+    ;;
+    "h") # Print help and exit
+      show_usage
+      exit ${EXIT_SUCC}
+    ;;
+    "?") # Print help and exit
+      echo "Invalid option -${OPTARG}"
+      show_usage
+      exit ${EXIT_ERR}
+    ;;
+    :)
+      echo "Option -${OPTARG} requires an argument"
+      show_usage
+      exit ${EXIT_ERR}
+    ;;
+    *)
+      echo "Invalid option with parameter -${OPTARG}"
+      show_usage
+      exit ${EXIT_ERR}
+    ;;
+  esac
+done
+
+# Find duplicates using checksum check
+find . -size 20 \! -type d -exec cksum {} \; | sort | tee ${TMP_FILE} | cut -f 1,2 -d ‘ ‘ | uniq -d | grep -hif – ${TMP_FILE} > ${LOG_FILE}
+
+# Remove duplicates
+if [ "$RM_DUPS" = "Y" ]; then
+  while read file; do rm “$file”; done < ${LOG_FILE}
+fi
+
+# -- END -- #
+

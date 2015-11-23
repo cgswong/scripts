@@ -1,0 +1,318 @@
+{
+  "Statement": [
+    {
+      "Sid": "Stmt1382473313140",
+      "Action": [
+        "cloudformation:DescribeStackEvents",
+        "cloudformation:DescribeStackResource",
+        "cloudformation:DescribeStackResources",
+        "cloudformation:DescribeStacks",
+        "cloudformation:GetTemplate",
+        "cloudformation:ListStacks",
+        "cloudformation:ListStackResources"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382473372650",
+      "Action": [
+        "directconnect:DescribeConnectionDetail",
+        "directconnect:DescribeConnections",
+        "directconnect:DescribeOfferingDetail",
+        "directconnect:DescribeOfferings",
+        "directconnect:DescribeVirtualGateways",
+        "directconnect:DescribeVirtualInterfaces"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382473524695",
+      "Action": [
+        "elasticache:DescribeCacheClusters",
+        "elasticache:DescribeCacheParameterGroups",
+        "elasticache:DescribeCacheParameters",
+        "elasticache:DescribeCacheSecurityGroups",
+        "elasticache:DescribeEngineDefaultParameters",
+        "elasticache:DescribeEvents"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382473586796",
+      "Action": [
+        "elasticbeanstalk:DescribeApplicationVersions",
+        "elasticbeanstalk:DescribeApplications",
+        "elasticbeanstalk:DescribeConfigurationOptions",
+        "elasticbeanstalk:DescribeConfigurationSettings",
+        "elasticbeanstalk:DescribeEnvironmentResources",
+        "elasticbeanstalk:DescribeEnvironments",
+        "elasticbeanstalk:DescribeEvents"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382473670152",
+      "Action": [
+        "iam:EnableMFADevice",
+        "iam:GetAccountPasswordPolicy",
+        "iam:GetAccountSummary",
+        "iam:GetGroup",
+        "iam:GetGroupPolicy",
+        "iam:GetInstanceProfile",
+        "iam:GetLoginProfile",
+        "iam:GetRole",
+        "iam:GetRolePolicy",
+        "iam:GetServerCertificate",
+        "iam:GetUser",
+        "iam:GetUserPolicy",
+        "iam:ListAccessKeys",
+        "iam:ListAccountAliases",
+        "iam:ListGroupPolicies",
+        "iam:ListGroups",
+        "iam:ListGroupsForUser",
+        "iam:ListInstanceProfiles",
+        "iam:ListInstanceProfilesForRole",
+        "iam:ListMFADevices",
+        "iam:ListRolePolicies",
+        "iam:ListRoles",
+        "iam:ListServerCertificates",
+        "iam:ListSigningCertificates",
+        "iam:ListUserPolicies",
+        "iam:ListUsers",
+        "iam:ListVirtualMFADevices"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382473769689",
+      "Action": [
+        "cloudfront:GetCloudFrontOriginAccessIdentity",
+        "cloudfront:GetCloudFrontOriginAccessIdentityConfig",
+        "cloudfront:GetDistribution",
+        "cloudfront:GetDistributionConfig",
+        "cloudfront:GetInvalidation",
+        "cloudfront:GetStreamingDistribution",
+        "cloudfront:GetStreamingDistributionConfig",
+        "cloudfront:ListCloudFrontOriginAccessIdentities",
+        "cloudfront:ListDistributions",
+        "cloudfront:ListInvalidations",
+        "cloudfront:ListStreamingDistributions"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382473827753",
+      "Action": [
+        "dynamodb:ListTables"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382473847436",
+      "Action": [
+        "cloudwatch:DescribeAlarms",
+        "cloudwatch:DescribeAlarmsForMetric"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382473949008",
+      "Action": [
+        "ec2:DescribeAddresses",
+        "ec2:DescribeAvailabilityZones",
+        "ec2:DescribeBundleTasks",
+        "ec2:DescribeConversionTasks",
+        "ec2:DescribeCustomerGateways",
+        "ec2:DescribeDhcpOptions",
+        "ec2:DescribeExportTasks",
+        "ec2:DescribeImageAttribute",
+        "ec2:DescribeImages",
+        "ec2:DescribeInstanceAttribute",
+        "ec2:DescribeInstanceStatus",
+        "ec2:DescribeInstances",
+        "ec2:DescribeInternetGateways",
+        "ec2:DescribeKeyPairs",
+        "ec2:DescribeLicenses",
+        "ec2:DescribeNetworkAcls",
+        "ec2:DescribeNetworkInterfaceAttribute",
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:DescribePlacementGroups",
+        "ec2:DescribeRegions",
+        "ec2:DescribeReservedInstances",
+        "ec2:DescribeReservedInstancesOfferings",
+        "ec2:DescribeRouteTables",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSnapshotAttribute",
+        "ec2:DescribeSnapshots",
+        "ec2:DescribeSpotDatafeedSubscription",
+        "ec2:DescribeSpotInstanceRequests",
+        "ec2:DescribeSpotPriceHistory",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeTags",
+        "ec2:DescribeVolumeAttribute",
+        "ec2:DescribeVolumeStatus",
+        "ec2:DescribeVolumes",
+        "ec2:DescribeVpcs",
+        "ec2:DescribeVpnConnections",
+        "ec2:DescribeVpnGateways"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382473973753",
+      "Action": [
+        "elasticmapreduce:DescribeJobFlows"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382474013985",
+      "Action": [
+        "glacier:ListVaults"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382474111630",
+      "Action": [
+        "rds:DescribeEngineDefaultParameters",
+        "rds:DescribeDBInstances",
+        "rds:DescribeDBLogFiles",
+        "rds:DescribeDBParameterGroups",
+        "rds:DescribeDBParameters",
+        "rds:DescribeDBSecurityGroups",
+        "rds:DescribeDBSnapshots",
+        "rds:DescribeDBEngineVersions",
+        "rds:DescribeDBSubnetGroups",
+        "rds:DescribeEventCategories",
+        "rds:DescribeEvents",
+        "rds:DescribeEventSubscriptions",
+        "rds:DescribeOptionGroups",
+        "rds:DescribeOptionGroupOptions",
+        "rds:DescribeOrderableDBInstanceOptions",
+        "rds:DescribeReservedDBInstances",
+        "rds:DescribeReservedDBInstancesOfferings",
+        "rds:DownloadDBLogFilePortion",
+        "rds:ListTagsForResource"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382474155140",
+      "Action": [
+        "redshift:DescribeClusterParameterGroups",
+        "redshift:DescribeClusterParameters",
+        "redshift:DescribeClusterSecurityGroups",
+        "redshift:DescribeClusterSnapshots",
+        "redshift:DescribeClusterSubnetGroups",
+        "redshift:DescribeClusterVersions",
+        "redshift:DescribeClusters",
+        "redshift:DescribeDefaultClusterParameters",
+        "redshift:DescribeEvents",
+        "redshift:DescribeOrderableClusterOptions",
+        "redshift:DescribeReservedNodeOfferings",
+        "redshift:DescribeReservedNodes",
+        "redshift:DescribeResize"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382474179763",
+      "Action": [
+        "route53:GetHostedZone",
+        "route53:ListHostedZones",
+        "route53:ListResourceRecordSets"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382474270211",
+      "Action": [
+        "s3:GetBucketAcl",
+        "s3:GetBucketLocation",
+        "s3:GetBucketLogging",
+        "s3:GetBucketNotification",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketRequestPayment",
+        "s3:GetBucketVersioning",
+        "s3:GetBucketWebsite",
+        "s3:GetLifecycleConfiguration",
+        "s3:GetObjectAcl",
+        "s3:GetObjectVersionAcl",
+        "s3:ListAllMyBuckets"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382474318789",
+      "Action": [
+        "sns:GetTopicAttributes",
+        "sns:ListTopics"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382474357071",
+      "Action": [
+        "sqs:GetQueueAttributes",
+        "sqs:ListQueues"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382474420018",
+      "Action": [
+        "sdb:DomainMetadata",
+        "sdb:ListDomains"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382474456476",
+      "Action": [
+        "autoscaling:DescribeAdjustmentTypes",
+        "autoscaling:DescribeAutoScalingGroups",
+        "autoscaling:DescribeAutoScalingInstances",
+        "autoscaling:DescribeAutoScalingNotificationTypes",
+        "autoscaling:DescribeLaunchConfigurations",
+        "autoscaling:DescribeMetricCollectionTypes",
+        "autoscaling:DescribeNotificationConfigurations",
+        "autoscaling:DescribePolicies",
+        "autoscaling:DescribeScalingActivities",
+        "autoscaling:DescribeScalingProcessTypes",
+        "autoscaling:DescribeScheduledActions",
+        "autoscaling:DescribeTags",
+        "autoscaling:DescribeTriggers"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Stmt1382474477509",
+      "Action": [
+        "elasticloadbalancing:DescribeInstanceHealth",
+        "elasticloadbalancing:DescribeLoadBalancers"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    }
+  ]
+}

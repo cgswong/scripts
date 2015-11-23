@@ -1,0 +1,28 @@
+#! /usr/bin/env bash
+# ###############################################
+# DESC.: Setup dnsmasq for local DNS
+#        resolution to localhost/127.0.0.1
+# ###############################################
+
+# Process argument
+if [ -z $1 ]; then
+  echo "ERROR: No argument provided."
+  echo "A DNS domain (for example 'local' or 'dev') must be provided."
+  exit 1
+fi
+dns=${1}
+
+# Variables
+fl_base="/etc/resolver"
+fl_dns="$fl_base/$dns"
+
+[ ! -d "$fl_base" ] && mkdir -p $fl_base
+if [ ! -f "$fl_dns" ]; then
+  cat > $fl_dns <<EOF
+nameserver 127.0.0.1
+EOF
+  echo "Created $fl_dns:"
+  cat $fl_dns
+else
+  echo "$fl_dns already exists!"
+fi
