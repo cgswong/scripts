@@ -18,6 +18,7 @@ machine-init() {
   # Build test VM if needed
   DOCKER_MACHINE_NAME=${DOCKER_MACHINE_NAME:-"citest"} ; export DOCKER_MACHINE_NAME
   VIRTUALBOX_DISK_SIZE=${VIRTUALBOX_DISK_SIZE:-"10240"}
+  export VIRTUALBOX_BOOT2DOCKER_URL=https://github.com/boot2docker/boot2docker/releases/download/v1.9.0/boot2docker.iso
 
   docker-machine ls -q | grep "${DOCKER_MACHINE_NAME}" &>/dev/null
   if [ $? -ne 0 ]; then
