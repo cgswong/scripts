@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+: ${KUBE_AWS_INSTANCE_PREFIX:="k8"}
+: ${MASTER_NAME:="$KUBE_AWS_INSTANCE_PREFIX-master"}
+: ${KUBERNETES_PROVIDER:="aws"}
+: ${KUBE_AWS_ZONE:="us-east-1a"}
+: ${NUM_NODES:=3}
+: ${MASTER_SIZE:="m4.medium"}
+: ${NODE_SIZE:="m4.large"}
+: ${MULTIZONE:=1}
+
+export KUBE_AWS_INSTANCE_PREFIX
+export MASTER_NAME
+export KUBERNETES_PROVIDER
+export KUBE_AWS_ZONE
+export NUM_NODES
+export MASTER_SIZE
+export NODE_SIZE
+export MULTIZONE
+
+echo "Spinning up Kubernetes..."
+curl -sS https://get.k8s.io | MULTIZONE=${MULTIZONE} KUBERNETES_PROVIDER=${KUBERNETES_PROVIDER} KUBE_AWS_ZONE={KUBE_AWS_ZONE} NUM_NODES=${NUM_NODES} bash
+
+MASTER_PRIVATE_IP=$(aws ec2 describe-instances --max-items=1 --filters "Name=tag:Name,Values=$MASTER_NAME" --output text --query 'Reservations[*].Instances[*].PrivateIpAddress')
+
+: ${KUBE_USE_EXISTING_MASTER:=true}
+: ${NUM_NODES:=3}
+: ${KUBE_AWS_ZONE:="us-east-1b"}
+: ${KUBE_SUBNET_CIDR:="172.20.1.0/24"}
+
+export KUBE_USE_EXISTING_MASTER
+export NUM_NODES
+export KUBE_AWS_ZONE
+export KUBE_SUBNET_CIDR
+export MASTER_INTERNAL_IP=${MASTER_PRIVATE_IP}
+
+echo "Expanding Kubernetes in ${KUBE_AWS_ZONE} AZ with master IP ${MASTER_PRIVATE_IP}"
+[ ${MULTIZONE} -eq 1 ] && kubernetes/cluster/kube-up.sh
