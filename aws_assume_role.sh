@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 CMD="$@"
-: ${AWS_ACCOUNT_ID:="265365382492"}
-: ${AWS_ROLE_NAME:="datahub"}
-: ${AWS_PROFILE_NAME:="datahub-np"}
+: ${AWS_ACCOUNT_ID:="123456542501"}
+: ${AWS_ROLE_NAME:="myrole"}
+: ${AWS_PROFILE_NAME:="myrole-np"}
 : ${ROLE_SESSION_NAME:="nonprd"}
 
 ASSUME_ROLE="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${AWS_ROLE_NAME}"
