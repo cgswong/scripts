@@ -1,12 +1,5 @@
-#!/bin/bash
-# ##################################################
-# NAME: find_dups.sh
-# DESC: Find duplicate files using checksum.
-#
-# LOG:
-# yyyy/mm/dd [user] [version]: [notes]
-# 2014/11/05 cgwong v0.1.0: Initial creation.
-# #################################################
+#!/usr/bin/env bash
+# Find duplicate files using checksum..
 
 # -- VARIABLES -- #
 SCRIPT=`basename $0`                                # Script name without path
@@ -73,6 +66,4 @@ find . -size 20 \! -type d -exec cksum {} \; | sort | tee ${TMP_FILE} | cut -f 1
 if [ "$RM_DUPS" = "Y" ]; then
   while read file; do rm “$file”; done < ${LOG_FILE}
 fi
-
 # -- END -- #
-

@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# Setup and launch Kubernetes for multi-AZ.
+
+pkg=${0##*/}
+KUBEUP="~/repos/workspace/k8s/kubernetes/cluster/kube-up.sh"
+
+# set colors
+red=$(tput setaf 1)
+green=$(tput setaf 2)
+yellow=$(tput setaf 3)
+blue=$(tput setaf 4)
+purple=$(tput setaf 5)
+cyan=$(tput setaf 6)
+white=$(tput setaf 7)
+reset=$(tput sgr0)
+
+: ${INSTANCE_PREFIX:="k8"}
+: ${KUBERNETES_PROVIDER:="aws"}
+: ${KUBE_AWS_ZONE:="us-east-1a"}
+: ${KUBE_USE_EXISTING_MASTER:=1}
+: ${MASTER_NAME:="$INSTANCE_PREFIX-master"}
+: ${MASTER_SIZE:="m4.medium"}
+: ${NODE_SIZE:="m4.large"}
+: ${NUM_NODES:=3}
+
+export INSTANCE_PREFIX
+export KUBERNETES_PROVIDER
+export KUBE_AWS_ZONE
+export KUBE_USE_EXISTING_MASTER
+export MASTER_NAME
+export MASTER_SIZE
+export NODE_SIZE
+export NUM_NODES
+export MULTIZONE=true
+
+# Write messages to screen
+log() {
+  echo "$(date +"%F %T") $(hostname) [${pkg}] $1"
+}
+
+# Write exit failure messages to syslog and exit with failure code (i.e. non-zero)
+die() {
+  log "${red}[FAIL] $1${reset}" && exit 1
+}
+
+usage() {
+cat <<EOM
+
+${pkg}
+
+Create single master, multi-az Kubernetes cluster
+
+Usage: ${pkg} [OPTIONS]
+
+Options:
+  -h,--help                       Output help (this message)
+  -az=[availability zone]         AWS Availability Zone in which to launch infrastructure
+  -c,--create                     Create new cluster, otherwise we assume an existing
+  -n=,--nodes=[#]                 Create specified number of worker/minion nodes
+  -subnet=[CIDR]                  CIDR block of subnet in which to deploy. Typically of the order 172.20.x.0/24
+  -t=,--type=[EC2 instance type]  Use specified type EC2 instance
+
+EOM
+}
+
+# Deploy new cluster
+launch_new() {
+  log "Deploying Kubernetes..."
+  MULTIZONE=${MULTIZONE} KUBERNETES_PROVIDER=${KUBERNETES_PROVIDER} KUBE_AWS_ZONE={KUBE_AWS_ZONE} NUM_NODES=${NUM_NODES} ${KUBEUP}
+}
+
+launch_existing() {
+  MASTER_PRIVATE_IP=$(aws ec2 describe-instances --max-items=1 --filters "Name=tag:Name,Values=$MASTER_NAME" --output text --query 'Reservations[*].Instances[*].PrivateIpAddress')
+  export MASTER_INTERNAL_IP=${MASTER_PRIVATE_IP}
+
+  log "Expanding Kubernetes into ${KUBE_AWS_ZONE} with master IP ${MASTER_PRIVATE_IP}"
+  KUBE_USE_EXISTING_MASTER=${KUBE_USE_EXISTING_MASTER} MULTIZONE=${MULTIZONE} KUBERNETES_PROVIDER=${KUBERNETES_PROVIDER} KUBE_AWS_ZONE={KUBE_AWS_ZONE} NUM_NODES=${NUM_NODES} KUBE_SUBNET_CIDR=${KUBE_SUBNET_CIDR} MASTER_PRIVATE_IP=${MASTER_PRIVATE_IP} ${KUBEUP}
+}
+
+# Process command line
+for arg in "$@"; do
+  if [[ -n "$prev_arg"]] ; then
+    eval "$prev_arg=\$arg"
+    prev_arg=
+  fi
+
+  case "$arg" in
+    -*=*) optarg=${arg#[-_a-zA-Z0-9]*=} ;;
+    *) optarg= ;;
+  esac
+
+  case $arg in
+    -h | --help)      usage && exit 0 ;;
+    -az=*)            KUBE_AWS_ZONE="$optarg" ;;
+    -c | --create)    KUBE_USE_EXISTING_MASTER=0 ;;
+    -n=* | --nodes=*) NUM_NODES="$optarg" ;;
+    --subnet=*)       KUBE_SUBNET_CIDR="$optarg" ;;
+    -t=* | --type=*)  NODE_SIZE="$optarg" ;;
+    -*)               die "Unknown option $arg, exiting..." ;;
+    *)
+      log "${red}[FAIL]Unknown option or missing argument for $arg, exiting.${reset}"
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+if [[ ${KUBE_USE_EXISTING_MASTER} -eq 0 ]]; then
+  launch_new
+else
+  [[ ! -z ${KUBE_SUBNET_CIDR} ]]
+  launch_existing
+fi

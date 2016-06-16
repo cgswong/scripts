@@ -1,8 +1,5 @@
-#! /usr/bin/env bash
-# ###############################################
-# DESC.: Setup dnsmasq for local DNS
-#        resolution to localhost/127.0.0.1
-# ###############################################
+#!/usr/bin/env bash
+# Setup dnsmasq for local DNS resolution to localhost/127.0.0.1
 
 # Process argument
 if [ -z $1 ]; then

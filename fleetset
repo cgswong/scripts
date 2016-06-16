@@ -1,11 +1,5 @@
-#!/bin/bash
-# #########################################################
-# NAME: fleetset.sh
-# DESC: Setup local environment for using 'fleetctl' and API.
-# LOG:
-# yyyy/mm/dd [user]: [version][notes]
-# 2015/02/25 cgwong: v0.1.0 Creation
-# #########################################################
+#!/usr/bin/env bash
+# Setup local Vagrant environment for using 'fleetctl' and its API.
 
 # Process command line argument (vagrant box name)
 if [ $# -ne 1 ]; then
