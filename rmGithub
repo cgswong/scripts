@@ -1,13 +1,6 @@
-#!/bin/bash
-# ########################################################################
-# NAME: rm-github.sh
-# DESC: Script to completely remove Github from Max OS X. Reference:
-#       https://gist.github.com/naomik/11245234
-#
-# LOG:
-# yyyy/mm/dd [name] [version]: [notes]
-# 2014/10/14 cgwong v0.1.0: Initial creation.
-# ########################################################################
+#!/usr/bin/env bash
+# Completely remove Github from Max OS X.
+# Reference: https://gist.github.com/naomik/11245234
 
 function remove_dir () {
   rm -rf "$1_"

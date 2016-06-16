@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Upload files to AWS S3.
 
 usage()
 {
