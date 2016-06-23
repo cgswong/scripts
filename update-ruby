@@ -1,0 +1,6 @@
+#!/bin/bash
+# Update all ruby gems and bundles
+
+sudo gem update --system
+sudo gem update
+sudo bundle update
