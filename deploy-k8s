@@ -2,7 +2,6 @@
 # Setup and launch Kubernetes for multi-AZ.
 
 pkg=${0##*/}
-KUBEUP="~/repos/workspace/k8s/kubernetes/cluster/kube-up.sh"
 
 # set colors
 red=$(tput setaf 1)
@@ -14,20 +13,30 @@ cyan=$(tput setaf 6)
 white=$(tput setaf 7)
 reset=$(tput sgr0)
 
+# Set variables
+: ${KUBEUP:="~/repos/workspace/k8s/kubernetes/cluster/kube-up.sh"}
 : ${INSTANCE_PREFIX:="k8"}
+: ${KUBE_AWS_INSTANCE_PREFIX:="k8"}
+: ${AWS_S3_BUCKET:="${INSTANCE_PREFIX}-artifacts"}
+: ${AWS_S3_REGION:="us-east-1"}
 : ${KUBERNETES_PROVIDER:="aws"}
 : ${KUBE_AWS_ZONE:="us-east-1a"}
-: ${KUBE_USE_EXISTING_MASTER:=1}
-: ${MASTER_NAME:="$INSTANCE_PREFIX-master"}
+: ${KUBE_OS_DISTRIBUTION="ubuntu"}
+: ${KUBE_USE_EXISTING_MASTER:=true}
 : ${MASTER_SIZE:="m4.medium"}
-: ${NODE_SIZE:="m4.large"}
+: ${NODE_SIZE:="t2.large"}
 : ${NUM_NODES:=3}
+IFS=','
 
+export KUBEUP
 export INSTANCE_PREFIX
+export KUBE_AWS_INSTANCE_PREFIX
+export AWS_S3_BUCKET
+export AWS_S3_REGION
 export KUBERNETES_PROVIDER
 export KUBE_AWS_ZONE
+export KUBE_OS_DISTRIBUTION
 export KUBE_USE_EXISTING_MASTER
-export MASTER_NAME
 export MASTER_SIZE
 export NODE_SIZE
 export NUM_NODES
@@ -43,6 +52,7 @@ die() {
   log "${red}[FAIL] $1${reset}" && exit 1
 }
 
+# Usage function
 usage() {
 cat <<EOM
 
@@ -53,12 +63,26 @@ Create single master, multi-az Kubernetes cluster
 Usage: ${pkg} [OPTIONS]
 
 Options:
-  -h,--help                       Output help (this message)
-  -az=[availability zone]         AWS Availability Zone in which to launch infrastructure
-  -c,--create                     Create new cluster, otherwise we assume an existing
-  -n=,--nodes=[#]                 Create specified number of worker/minion nodes
-  -subnet=[CIDR]                  CIDR block of subnet in which to deploy. Typically of the order 172.20.x.0/24
-  -t=,--type=[EC2 instance type]  Use specified type EC2 instance
+  -h,--help
+    Output help (this message)
+
+  --zone=[availability zone]
+    Comma separated list of AWS Availability Zones
+
+  --create
+    Create new cluster, otherwise we assume an existing
+
+  --node-count=3
+    Create specified number of nodes
+
+  --node-size=m4.large
+    Specify the node size
+
+  --master-size=m4.large
+    Specify the master size
+
+  --subnet=172.20.0.0/24,172.20.2.0/24,172.20.4.0/24
+    Comma separated list of CIDR blocks for subnets in which to deploy.
 
 EOM
 }
@@ -66,15 +90,16 @@ EOM
 # Deploy new cluster
 launch_new() {
   log "Deploying Kubernetes..."
-  MULTIZONE=${MULTIZONE} KUBERNETES_PROVIDER=${KUBERNETES_PROVIDER} KUBE_AWS_ZONE={KUBE_AWS_ZONE} NUM_NODES=${NUM_NODES} ${KUBEUP}
+  MULTIZONE=${MULTIZONE} KUBERNETES_PROVIDER=${KUBERNETES_PROVIDER} KUBE_AWS_ZONE=${KUBE_AWS_ZONE} NUM_NODES=${NUM_NODES} AWS_S3_REGION=${AWS_S3_REGION} ${KUBEUP}
 }
 
+# Add new node to existing cluster
 launch_existing() {
   MASTER_PRIVATE_IP=$(aws ec2 describe-instances --max-items=1 --filters "Name=tag:Name,Values=$MASTER_NAME" --output text --query 'Reservations[*].Instances[*].PrivateIpAddress')
   export MASTER_INTERNAL_IP=${MASTER_PRIVATE_IP}
 
   log "Expanding Kubernetes into ${KUBE_AWS_ZONE} with master IP ${MASTER_PRIVATE_IP}"
-  KUBE_USE_EXISTING_MASTER=${KUBE_USE_EXISTING_MASTER} MULTIZONE=${MULTIZONE} KUBERNETES_PROVIDER=${KUBERNETES_PROVIDER} KUBE_AWS_ZONE={KUBE_AWS_ZONE} NUM_NODES=${NUM_NODES} KUBE_SUBNET_CIDR=${KUBE_SUBNET_CIDR} MASTER_PRIVATE_IP=${MASTER_PRIVATE_IP} ${KUBEUP}
+  KUBE_USE_EXISTING_MASTER=${KUBE_USE_EXISTING_MASTER} MULTIZONE=${MULTIZONE} KUBERNETES_PROVIDER=${KUBERNETES_PROVIDER} KUBE_AWS_ZONE=${KUBE_AWS_ZONE} NUM_NODES=${NUM_NODES} KUBE_SUBNET_CIDR=${KUBE_SUBNET_CIDR} MASTER_PRIVATE_IP=${MASTER_PRIVATE_IP} AWS_S3_REGION=${AWS_S3_REGION} ${KUBEUP}
 }
 
 # Process command line
@@ -91,11 +116,12 @@ for arg in "$@"; do
 
   case $arg in
     -h | --help)      usage && exit 0 ;;
-    -az=*)            KUBE_AWS_ZONE="$optarg" ;;
-    -c | --create)    KUBE_USE_EXISTING_MASTER=0 ;;
-    -n=* | --nodes=*) NUM_NODES="$optarg" ;;
-    --subnet=*)       KUBE_SUBNET_CIDR="$optarg" ;;
-    -t=* | --type=*)  NODE_SIZE="$optarg" ;;
+    --zone=*)         ZONE_ARRAY=($optarg) ;;
+    --subnet=*)       SUBNET_ARRAY=($optarg) ;;
+    --create)         KUBE_USE_EXISTING_MASTER=false ;;
+    --node-count=*)   NUM_NODES="$optarg" ;;
+    --node-size=*)    NODE_SIZE="$optarg" ;;
+    --master-size=*)  MASTER_SIZE="$optarg" ;;
     -*)               die "Unknown option $arg, exiting..." ;;
     *)
       log "${red}[FAIL]Unknown option or missing argument for $arg, exiting.${reset}"
@@ -105,9 +131,26 @@ for arg in "$@"; do
   esac
 done
 
-if [[ ${KUBE_USE_EXISTING_MASTER} -eq 0 ]]; then
+# Set AWS zones and subnets, and deploy new cluster if required,
+# adding a node if NUM_NODES > 1
+KUBE_AWS_ZONE=${ZONE_ARRAY[0]}
+KUBE_SUBNET_CIDR=${SUBNET_ARRAY[0]}
+if [[ ${KUBE_USE_EXISTING_MASTER} == "false" ]]; then
   launch_new
+  if [[ ${NUM_NODES} -gt 1 ]]; then
+    for ((i=1; i < ${#ZONE_ARRAY[@]}; i++)); do
+      KUBE_AWS_ZONE=${ZONE_ARRAY[$i]}
+      KUBE_SUBNET_CIDR=${SUBNET_ARRAY[$i]}
+      launch_existing
+    done
+  fi
 else
-  [[ ! -z ${KUBE_SUBNET_CIDR} ]]
   launch_existing
+  if [[ ${NUM_NODES} -gt 1 ]]; then
+    for ((i=1; i < ${#ZONE_ARRAY[@]}; i++)); do
+      KUBE_AWS_ZONE=${ZONE_ARRAY[$i]}
+      KUBE_SUBNET_CIDR=${SUBNET_ARRAY[$i]}
+      launch_existing
+    done
+  fi
 fi
