@@ -1,7 +1,9 @@
 #!/usr/bin/env python
+# Sign into AWS console using STS (does not work for MFA) 
+
 import requests # "pip install requests"
 import sys, os, urllib, json, webbrowser
-from boto.sts import STSConnection # AWS Python SDK--"pip install boto"
+from boto3.sts import STSConnection # AWS Python SDK--"pip install boto3"
 
 # Step 1: Prompt user for target account ID and name of role to assume
 if len(sys.argv) == 3:
