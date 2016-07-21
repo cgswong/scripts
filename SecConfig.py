@@ -3,7 +3,7 @@
 # Example code to output account security config
 __author__ = 'Greg Roth'
 
-import boto
+import boto3
 import urllib
 import hashlib
 import argparse
@@ -20,7 +20,7 @@ args = parser.parse_args()
 access_key_id = args.access_key_id
 secret_access_key = args.secret_access_key
 security_token = args.security_token
-sts = boto.connect_sts(access_key_id, secret_access_key)
+sts = boto3.connect_sts(access_key_id, secret_access_key)
 
 if args.role:
     assumed_role = sts.assume_role(args.role, "SecAudit")
@@ -60,7 +60,7 @@ def output_lines(lines):
         print line
 
 
-iam = boto.connect_iam(access_key_id, secret_access_key, security_token=security_token)
+iam = boto3.connect_iam(access_key_id, secret_access_key, security_token=security_token)
 verbose("Getting account summary:")
 summary = iam.get_account_summary()
 debug(summary)
@@ -138,21 +138,21 @@ output_lines(role_policy)
 
 #  S3 bucket policies
 verbose("Getting S3 bucket policies:")
-s3 = boto.connect_s3(access_key_id, secret_access_key, security_token=security_token)
+s3 = boto3.connect_s3(access_key_id, secret_access_key, security_token=security_token)
 bucket_info = []
 buckets = s3.get_all_buckets()
 for bucket in buckets:
     try:
         policy = bucket.get_policy()
         bucket_info.append(config_line_policy("s3:bucketpolicy", bucket.name, "", policy))
-    except boto.exception.S3ResponseError as e:
+    except boto3.exception.S3ResponseError as e:
         bucket_info.append(config_line("s3:bucketpolicy", bucket.name, "", e.code))
 output_lines(bucket_info)
 
 
 # SQS queue policies
 verbose("Getting SQS queue policies:")
-sqs = boto.connect_sqs(access_key_id, secret_access_key, security_token=security_token)
+sqs = boto3.connect_sqs(access_key_id, secret_access_key, security_token=security_token)
 queue_info = []
 queues = sqs.get_all_queues()
 for queue in queues:
@@ -166,7 +166,7 @@ output_lines(queue_info)
 
 # SNS topic policies
 verbose("Getting SNS topic policies:")
-sns = boto.connect_sns(access_key_id, secret_access_key, security_token=security_token)
+sns = boto3.connect_sns(access_key_id, secret_access_key, security_token=security_token)
 topic_info = []
 topics = sns.get_all_topics()
 topics = topics["ListTopicsResponse"]["ListTopicsResult"]["Topics"]
@@ -179,7 +179,7 @@ output_lines(topic_info)
 
 # EC2 security groups
 sg_info = []
-ec2 = boto.connect_ec2(access_key_id, secret_access_key, security_token=security_token)
+ec2 = boto3.connect_ec2(access_key_id, secret_access_key, security_token=security_token)
 groups = ec2.get_all_security_groups()
 for group in groups:
     for rule in group.rules:
