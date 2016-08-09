@@ -1,1 +1,6 @@
-wget-ora.sh
+# Corectl stuff
+corectl
+corectld
+corectld.runner
+deploy-ghpages
+qcow-tool
