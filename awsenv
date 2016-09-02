@@ -1,26 +1,9 @@
 #!/usr/bin/env bash
 # Set the AWS environment for CLI usage using environment variables
-
-# Set name
-pkg=${BASH_SOURCE##*/}
-
-# set colors
-red=$(tput setaf 1)
-green=$(tput setaf 2)
-yellow=$(tput setaf 3)
-blue=$(tput setaf 4)
-purple=$(tput setaf 5)
-cyan=$(tput setaf 6)
-white=$(tput setaf 7)
-reset=$(tput sgr0)
-
-# Write messages to screen
-log() {
-  echo "$(date +"%F %T") $(hostname) [${pkg}] $1"
-}
+# To run: eval $(awsnev <aws_profile_name>)
 
 # AWS CLI
-# Valid options for AWS_DEFAULT_OUTPUT: 
+# Valid options for AWS_DEFAULT_OUTPUT:
 # json: good for processing with `jq`
 # text: (recommended with --query option) good for processing with *nix tools (tab-delimited)
 # table: can be a bit more human readable
@@ -37,18 +20,17 @@ export AWS_DEFAULT_REGION
 export AWS_CREDENTIAL_FILE
 
 # Read from the files to set the environment using profiles if provided
-awsCreds=( $(awk -F ' *= *' '{ if ($1 ~ /^\[/) section=$1; else if ($1 !~ /^$/) print section "=" $1 "=" "" $2 "" }' ${AWS_CREDENTIAL_FILE}) )
+awsCreds=( $(awk -F ' *= *' '{ if ($1 ~ /^\[/) section=$1; else if ($1 !~ /^$/) print section "=" $1 "=" "" $2 "" }' ${AWS_CREDENTIAL_FILE} | grep -v "##") )
 for rl in "${awsCreds[@]}"; do
   profile=$(echo "${rl}" | cut -d"=" -f1)
   if [ ["${1}"] == "${profile}" ]; then
     key=$(echo "${rl}" | cut -d"=" -f2)
     value=$(echo "${rl}" | cut -d"=" -f3)
     if [[ "aws_access_key_id" == ${key} ]]; then
-      log "${green}Setting AWS_ACCESS_KEY_ID=${value}${reset}"
-      export AWS_ACCESS_KEY_ID=${value}
+      echo export AWS_ACCESS_KEY_ID=${value}
     elif [[ "aws_secret_access_key" == ${key} ]]; then
-      log "${green}Setting AWS_SECRET_ACCESS_KEY=${value}${reset}"
-      export AWS_SECRET_ACCESS_KEY=${value}
+      echo export AWS_SECRET_ACCESS_KEY=${value}
+      echo export AWS_PROFILE=${1}
     fi
   fi
 done

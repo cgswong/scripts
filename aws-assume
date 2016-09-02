@@ -1,24 +1,32 @@
 #!/usr/bin/env bash
 # Uses AWS STS to assume role, setting environment variables
+# To run: . aws-assume <cmd>
 
 CMD="$@"
 : ${AWS_ACCOUNT_ID:="265365382492"}
 : ${AWS_ROLE_NAME:="datahub"}
 : ${AWS_PROFILE_NAME:="datasvc-np"}
-: ${ROLE_SESSION_NAME:="nonprd"}
+: ${AWS_SESSION_NAME:="${AWS_PROFILE_NAME}"}
 
 ASSUME_ROLE="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${AWS_ROLE_NAME}"
-TMP_FILE="~/.aws-credentials.tmp"
+TMP_FILE="${HOME}/.aws/credentials.tmp"
 
-if [[ ${CMD} == "unset" ]]; then
+case ${CMD} in
+  "unset" | "clear")
   unset AWS_ACCESS_KEY_ID
   unset AWS_SECRET_ACCESS_KEY
   unset AWS_SESSION_TOKEN
   unset AWS_PROFILE
-  exit 0
-fi
+  return 0
+  ;;
+esac
 
-aws --profile=${AWS_PROFILE_NAME} sts assume-role --output json --role-arn ${ASSUME_ROLE} --role-session-name ${ROLE_SESSION_NAME} &> ${TMP_FILE}
+aws --profile=${AWS_PROFILE_NAME} sts assume-role --output json --role-arn ${ASSUME_ROLE} --role-session-name ${AWS_SESSION_NAME} &> ${TMP_FILE}
+
+if [[ $? -ne 0 ]]; then
+  cat ${TMP_FILE}
+  return 1
+fi
 
 ACCESS_KEY=$(cat ${TMP_FILE} | jq -r ".Credentials.AccessKeyId")
 SECRET_KEY=$(cat ${TMP_FILE} | jq -r ".Credentials.SecretAccessKey")
@@ -32,4 +40,4 @@ export AWS_SECRET_ACCESS_KEY=${SECRET_KEY}
 export AWS_SESSION_TOKEN=${SESSION_TOKEN}
 export AWS_PROFILE=${AWS_PROFILE_NAME}
 
-AWS_ACCESS_KEY_ID=${ACCESS_KEY} AWS_SECRET_ACCESS_KEY=${SECRET_KEY} AWS_SESSION_TOKEN=${SESSION_TOKEN} AWS_PROFILE=${AWS_PROFILE_NAME} ${CMD}
+[[ ! -z ${CMD} ]] && AWS_ACCESS_KEY_ID=${ACCESS_KEY} AWS_SECRET_ACCESS_KEY=${SECRET_KEY} AWS_SESSION_TOKEN=${SESSION_TOKEN} AWS_PROFILE=${AWS_PROFILE_NAME} ${CMD}
