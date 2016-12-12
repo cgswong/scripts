@@ -8,8 +8,14 @@ CMD="$@"
 : ${AWS_PROFILE_NAME:="myrole-np"}
 : ${AWS_SESSION_NAME:="${AWS_PROFILE_NAME}"}
 
+export AWS_ACCOUNT_ID
+export AWS_ROLE_NAME
+export AWS_PROFILE_NAME
+export AWS_SESSION_NAME
+
 ASSUME_ROLE="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${AWS_ROLE_NAME}"
-TMP_FILE="${HOME}/.aws/credentials.tmp"
+[[ ! -d ${HOME}/.aws/tmp ]] && mkdir -p ${HOME}/.aws/tmp
+TMP_FILE="${HOME}/.aws/tmp/credentials.tmp"
 
 case ${CMD} in
   "unset" | "clear")
@@ -17,15 +23,15 @@ case ${CMD} in
   unset AWS_SECRET_ACCESS_KEY
   unset AWS_SESSION_TOKEN
   unset AWS_PROFILE
-  return 0
+  exit 0
   ;;
 esac
 
 aws --profile=${AWS_PROFILE_NAME} sts assume-role --output json --role-arn ${ASSUME_ROLE} --role-session-name ${AWS_SESSION_NAME} &> ${TMP_FILE}
 
 if [[ $? -ne 0 ]]; then
-  cat ${TMP_FILE}
-  return 1
+  echo "ERROR: assume role failed!"
+  exit 1
 fi
 
 ACCESS_KEY=$(cat ${TMP_FILE} | jq -r ".Credentials.AccessKeyId")
