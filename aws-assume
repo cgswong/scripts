@@ -1,50 +1,165 @@
 #!/usr/bin/env bash
 # Uses AWS STS to assume role, setting environment variables
-# To run: . aws-assume <cmd>
+# To run: . aws-assume
 
-CMD="$@"
-: ${AWS_ACCOUNT_ID:="123456542501"}
-: ${AWS_ROLE_NAME:="myrole"}
-: ${AWS_PROFILE_NAME:="myrole-np"}
-: ${AWS_SESSION_NAME:="${AWS_PROFILE_NAME}"}
+pkg=${0##*/}
 
-export AWS_ACCOUNT_ID
-export AWS_ROLE_NAME
-export AWS_PROFILE_NAME
-export AWS_SESSION_NAME
+## Functions
+log() {
+  echo "$(date +"[%F %X,000]") $(hostname) $1"
+}
 
-ASSUME_ROLE="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${AWS_ROLE_NAME}"
-[[ ! -d ${HOME}/.aws/tmp ]] && mkdir -p ${HOME}/.aws/tmp
-TMP_FILE="${HOME}/.aws/tmp/credentials.tmp"
+die() {
+  log "[FAIL] $1" >&2 && exit 1
+}
 
-case ${CMD} in
-  "unset" | "clear")
+role_unset() {
+  # Unsets environment variables #
   unset AWS_ACCESS_KEY_ID
   unset AWS_SECRET_ACCESS_KEY
   unset AWS_SESSION_TOKEN
-  unset AWS_PROFILE
-  exit 0
-  ;;
-esac
+  unset AWS_SESSION_EXPIRY
+  unset AWS_ROLE_NAME
+}
 
-aws --profile=${AWS_PROFILE_NAME} sts assume-role --output json --role-arn ${ASSUME_ROLE} --role-session-name ${AWS_SESSION_NAME} &> ${TMP_FILE}
+role_status() {
+  # Checks the role status and displays the expiration time remaining #
+  TIMELEFT=0
+  if [[ ! -z "${AWS_SESSION_EXPIRY}" ]]; then
+    EXPEPOCH=$(date --date "${AWS_SESSION_EXPIRY}" +%s)
+    NOWEPOCH=$(date +%s)
+    TIMELEFT=$((${EXPEPOCH} - ${NOWEPOCH}))
 
-if [[ $? -ne 0 ]]; then
-  echo "ERROR: assume role failed!"
-  exit 1
-fi
+    if [[ "$TIMELEFT" -gt 0 ]]; then
+      log "Assumed IAM Role: ${AWS_ROLE_NAME} (expires in "${TIMELEFT}"s)"
+    else
+      role_unset
+      log "Role of ${ROLE_ARN} expired."
+    fi
+  fi
+}
 
-ACCESS_KEY=$(cat ${TMP_FILE} | jq -r ".Credentials.AccessKeyId")
-SECRET_KEY=$(cat ${TMP_FILE} | jq -r ".Credentials.SecretAccessKey")
-SESSION_TOKEN=$(cat ${TMP_FILE} | jq -r ".Credentials.SessionToken")
-EXPIRATION=$(cat ${TMP_FILE} | jq -r ".Credentials.Expiration")
+usage() {
+  # Show usage #
+  echo "
+NAME
+  ${pkg} - AWS STS role assumption
 
-echo "Retrieved temp access key ${ACCESS_KEY} for role ${ASSUME_ROLE}. Key will expire at ${EXPIRATION}"
+DESCRIPTION
+  ${pkg} will, based on parameters passed, assume a role and provide AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+  and an AWS_SESSION_TOKEN which are needed for SDK, CLI, and other such access requirements for tools. You
+  can also pass your MFA token if enabled on your profile.
 
-export AWS_ACCESS_KEY_ID=${ACCESS_KEY}
-export AWS_SECRET_ACCESS_KEY=${SECRET_KEY}
-export AWS_SESSION_TOKEN=${SESSION_TOKEN}
-export AWS_PROFILE=${AWS_PROFILE_NAME}
-export AWS_DEFAULT_PROFILE=${AWS_PROFILE_NAME}
+SYNOPSIS
+  ${pkg} [--profile=<name>] [--account=<id>] [--role=<name>] [--user=<username>] [--mfa=<token>]
 
-[[ ! -z ${CMD} ]] && AWS_ACCESS_KEY_ID=${ACCESS_KEY} AWS_SECRET_ACCESS_KEY=${SECRET_KEY} AWS_SESSION_TOKEN=${SESSION_TOKEN} AWS_PROFILE=${AWS_PROFILE_NAME} AWS_DEFAULT_PROFILE=${AWS_PROFILE_NAME} ${CMD}
+OPTIONS
+  --profile=<name>
+    Name of AWS profile from your ~/.aws/config file to use.
+
+  --account=<id>
+    AWS Account ID in which operation will be performed.
+
+  --role=<name>
+    Name of AWS role to assume.
+
+  --user=<username>
+    Name of AWS IAM User which has the MFA device.
+
+  --mfa=<token>
+    MFA token.
+"
+}
+
+assume() {
+  # Assume the specified role and get the STS credentials to be set within the environment #
+  if [ -z "${AWS_PROFILE_NAME}" ] || [ -z "${AWS_ROLE_NAME}" ]; then
+    die "Missing parameters. Set both '--profile=<name>' and '--role=<name>', or environment variables 'AWS_PROFILE_NAME' and 'AWS_ROLE_NAME'."
+  fi
+  ROLE_ARN=$(aws --profile=${AWS_PROFILE_NAME} --output=json iam get-role --role-name ${AWS_ROLE_NAME} 2>/dev/null | jq -r '.Role | .Arn')
+  if [ $? -ne 0 ] || [ -z "${ROLE_ARN}" ]; then
+    die "Error getting role ARN."
+  fi
+  if [ -z "${AWS_ACCOUNT_ID}" ] || [ -z "${USER}" ]; then
+    die "Missing parameters. Set both '--account=<id>' and '--user=<username>', or environment variables 'AWS_ACCOUNT_ID' and 'USER'."
+  fi
+  MFA_SERIAL_NUMBER="arn:aws:iam::${AWS_ACCOUNT_ID}:mfa/${USER}"
+##  AWS_SESSION=$(aws --profile=${AWS_PROFILE_NAME} sts assume-role --output=json --role-arn "${ROLE_ARN}" --role-session-name ${AWS_PROFILE_NAME}-${AWS_ROLE_NAME} --serial-number "${MFA_SERIAL_NUMBER}" --token-code "${MFA_TOKEN}")
+  AWS_SESSION=$(aws --profile=${AWS_PROFILE_NAME} sts assume-role --output=json --role-arn "${ROLE_ARN}" --role-session-name ${AWS_PROFILE_NAME}-${AWS_ROLE_NAME} 2>/dev/null)
+  if [ $? -eq 0 ] && [ ! -z "${AWS_SESSION}" ]; then
+    export AWS_SECRET_ACCESS_KEY=$(echo "${AWS_SESSION}" | jq -r '.Credentials|.SecretAccessKey')
+    export AWS_ACCESS_KEY_ID=$(echo "${AWS_SESSION}" | jq -r '.Credentials|.AccessKeyId')
+    export AWS_SESSION_TOKEN=$(echo "${AWS_SESSION}" | jq -r '.Credentials|.SessionToken')
+    export AWS_SESSION_EXPIRY=$(echo "${AWS_SESSION}" | jq -r '.Credentials|.Expiration')
+    role_status
+  else
+    die "Error assuming role to get credentials."
+  fi
+}
+
+main () {
+  # Main function to handle processing #
+  # Process command line
+  for arg in "${@}"; do
+    case "${arg}" in
+      --profile)
+        if [ -n "${2}" ]; then
+          AWS_PROFILE_NAME=${2}
+          shift
+        else
+          die "Option ${arg} requires a value."
+        fi
+      ;;
+      --profile=*)
+        AWS_PROFILE_NAME=${arg#*=} # Delete everything up to "=" and assign the remainder.
+      ;;
+      --account)
+        if [ -n "${2}" ]; then
+          AWS_ACCOUNT_ID=${2}
+          shift
+        else
+          die "Option ${arg} requires a value."
+        fi
+      ;;
+      --account=*)
+        AWS_ACCOUNT_ID=${arg#*=} # Delete everything up to "=" and assign the remainder.
+      ;;
+      --role)
+        if [ -n "${2}" ]; then
+          AWS_ROLE_NAME=${2}
+          shift
+        else
+          die "Option ${arg} requires a value."
+        fi
+      ;;
+      --role=*)
+        AWS_ROLE_NAME=${arg#*=} # Delete everything up to "=" and assign the remainder.
+      ;;
+      --mfa)
+        if [ -n "${2}" ]; then
+          MFA_TOKEN=${2}
+          shift
+        else
+          die "Option ${arg} requires a value."
+        fi
+      ;;
+      --mfa=*)
+        MFA_TOKEN=${arg#*=}
+      ;;
+      -h | --help)
+        usage
+        exit 0
+      ;;
+      *)
+        log "Invalid option '${arg}'"
+        usage
+        exit 1
+      ;;
+    esac
+  done
+
+  assume
+}
+
+## Main
+main $@
