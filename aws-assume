@@ -148,12 +148,12 @@ main () {
       ;;
       -h | --help)
         usage
-        exit 0
+        return 0
       ;;
       *)
         log "Invalid option '${arg}'"
         usage
-        exit 1
+        return 1
       ;;
     esac
   done
