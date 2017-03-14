@@ -10,7 +10,7 @@ log() {
 }
 
 die() {
-  log "[FAIL] $1" >&2 && exit 1
+  log "[FAIL] $1" >&2 && return 1
 }
 
 role_unset() {
@@ -74,14 +74,14 @@ OPTIONS
 assume() {
   # Assume the specified role and get the STS credentials to be set within the environment #
   if [ -z "${AWS_PROFILE_NAME}" ] || [ -z "${AWS_ROLE_NAME}" ]; then
-    die "Missing parameters. Set both '--profile=<name>' and '--role=<name>', or environment variables 'AWS_PROFILE_NAME' and 'AWS_ROLE_NAME'."
+    die "Missing parameters. Set both '--profile=<name>' and '--role=<name>', or environment variables 'AWS_PROFILE_NAME' and 'AWS_ROLE_NAME'." ; return 1
   fi
   ROLE_ARN=$(aws --profile=${AWS_PROFILE_NAME} --output=json iam get-role --role-name ${AWS_ROLE_NAME} 2>/dev/null | jq -r '.Role | .Arn')
   if [ $? -ne 0 ] || [ -z "${ROLE_ARN}" ]; then
-    die "Error getting role ARN."
+    die "Error getting role ARN." ; return 1
   fi
   if [ -z "${AWS_ACCOUNT_ID}" ] || [ -z "${USER}" ]; then
-    die "Missing parameters. Set both '--account=<id>' and '--user=<username>', or environment variables 'AWS_ACCOUNT_ID' and 'USER'."
+    die "Missing parameters. Set both '--account=<id>' and '--user=<username>', or environment variables 'AWS_ACCOUNT_ID' and 'USER'." ; return 1
   fi
   MFA_SERIAL_NUMBER="arn:aws:iam::${AWS_ACCOUNT_ID}:mfa/${USER}"
 ##  AWS_SESSION=$(aws --profile=${AWS_PROFILE_NAME} sts assume-role --output=json --role-arn "${ROLE_ARN}" --role-session-name ${AWS_PROFILE_NAME}-${AWS_ROLE_NAME} --serial-number "${MFA_SERIAL_NUMBER}" --token-code "${MFA_TOKEN}")
@@ -93,7 +93,7 @@ assume() {
     export AWS_SESSION_EXPIRY=$(echo "${AWS_SESSION}" | jq -r '.Credentials|.Expiration')
     role_status
   else
-    die "Error assuming role to get credentials."
+    die "Error assuming role to get credentials." ; return 1
   fi
 }
 
@@ -107,7 +107,7 @@ main () {
           AWS_PROFILE_NAME=${2}
           shift
         else
-          die "Option ${arg} requires a value."
+          die "Option ${arg} requires a value." ; return 1
         fi
       ;;
       --profile=*)
@@ -118,7 +118,7 @@ main () {
           AWS_ACCOUNT_ID=${2}
           shift
         else
-          die "Option ${arg} requires a value."
+          die "Option ${arg} requires a value." ; return 1
         fi
       ;;
       --account=*)
@@ -129,7 +129,7 @@ main () {
           AWS_ROLE_NAME=${2}
           shift
         else
-          die "Option ${arg} requires a value."
+          die "Option ${arg} requires a value." ; return 1
         fi
       ;;
       --role=*)
@@ -140,7 +140,7 @@ main () {
           MFA_TOKEN=${2}
           shift
         else
-          die "Option ${arg} requires a value."
+          die "Option ${arg} requires a value." ; return 1
         fi
       ;;
       --mfa=*)
