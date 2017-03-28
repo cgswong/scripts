@@ -1,0 +1,51 @@
+#!/bin/bash
+# Create background SOCKS connection
+
+prg=${BASH_SOURCE##*/}
+SOCKS_PORT=${SOCKS_PORT:=9090}
+PID_FILE="/tmp/${prg}-${SOCKS_PORT}.pid"
+# These are taken from environment (check ~/.extra)
+##BASTION_KEYS=${BASTION_KEYS:="${HOME}/.aws/keys/local-kp.pem ${HOME}/.aws/keys/bastion-kp.pem"}
+##BASTION_CONN=${BASTION_CONN:="$(whoami)@bastion.com ec2-user@bastion.net"}
+
+start_conn() {
+  # Run some checks
+  if [[ -f "${PID_FILE}" ]]; then
+    echo "Process file exists! Process ID: $(cat ${PID_FILE})"
+    exit 1
+  fi
+
+  # Load keys
+  for skey in "${BASTION_KEYS}"; do
+    ssh-add ${skey}
+  done
+
+  # Create tunnel in background
+##  ssh -f -o ExitOnForwardFailure=yes -CND ${SOCKS_PORT} -J ${BASTION_CONN}
+##  autossh -M 0 -CND ${SOCKS_PORT} ${BASTION_CONN}
+##  PID=$!
+  PID=$$
+  echo ${PID} > ${PID_FILE}
+  ssh -CND ${SOCKS_PORT} -J ${BASTION_CONN}
+}
+
+stop_conn() {
+  if [[ -f "${PID_FILE}" ]]; then
+    echo "Killing ${prg} with PID $(cat ${PID_FILE})"
+    pkill -SIGKILL -F ${PID_FILE}
+    if [[ $? -ne 0 ]]; then
+      echo "Error killing process!"
+      exit 1
+    else
+      rm ${PID_FILE}
+    fi
+  else
+    echo "No PID file found."
+  fi
+}
+
+if [[ $1 == "stop" ]]; then
+  stop_conn
+else
+  start_conn
+fi
