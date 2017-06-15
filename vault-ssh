@@ -1,0 +1,106 @@
+#!/bin/bash
+# Simple script to SSH to remote server using Vault authentication.
+#
+# Usage:
+#    echo 'rolename' > ~/.vault_ssh_role
+#    vault-ssh -i ~/.ssh/some_privatekey user@host
+
+# Set values
+pkg=${0##*/}
+VAULT_SSH_ROLENAME=${VAULT_SSH_ROLENAME:-"monuser"}
+PERSONAL_PUBKEY=${PERSONAL_PUBKEY:-"${HOME}/.ssh/id_rsa.pub"}
+VAULT_SSH_PUBKEY="${PERSONAL_PUBKEY%.*}-cert.pub"
+
+# set colors
+red=$(tput setaf 1)
+green=$(tput setaf 2)
+yellow=$(tput setaf 3)
+blue=$(tput setaf 4)
+purple=$(tput setaf 5)
+cyan=$(tput setaf 6)
+white=$(tput setaf 7)
+reset=$(tput sgr0)
+
+log() {
+  # Write messages to screen
+  echo "$(date +"%F %T") [${pkg}] $1"
+}
+
+die() {
+  log "${red}[FAIL] $1${reset}" >&2 && return 1
+}
+
+usage() {
+cat <<EOM
+
+${pkg}
+
+SSH into remote host using Vault authentication.
+
+Usage: ${pkg} [options]
+
+Options:
+  -h, --help
+      Output help (this message)
+
+  -r=, --role=[role_name]
+      Name of Vault role to use (defaults to 'monuser'). Leave this as the default.
+
+  -p=, --pubkey=[public_key]
+      Full path to your personal public key (defaults to ${HOME}/.ssh/id_rsa.pub). This is the
+      only mandatory option.
+EOM
+}
+
+vault-ssh() {
+  # Authenticate to Vault, getting access tokens. Store the role for future usage.
+  if [[ ! $(vault token-lookup >/dev/null 2>&1) ]]; then
+    log "Authenticating to Vault for ${USER}"
+    vault auth -method=userpass -path=ping username=${USER}
+  fi
+  echo ${VAULT_SSH_ROLENAME} > ${HOME}/.vault_ssh_role
+  log "Using role ${VAULT_SSH_ROLENAME} to obtain signed Vault SSH key, ${VAULT_SSH_PUBKEY}, with public key ${PERSONAL_PUBKEY}"
+  vault write -field signed_key ssh/sign/${VAULT_SSH_ROLENAME} public_key=@${PERSONAL_PUBKEY} > ${VAULT_SSH_PUBKEY}
+  chmod 0400 ${VAULT_SSH_PUBKEY}
+}
+
+ssh-conn() {
+  # Wrapper for SSH connection
+  ssh ${SSH_CONN}
+}
+
+# Process command line
+for arg in "$@"; do
+  if test -n "$prev_arg"; then
+    eval "$prev_arg=\$arg"
+    prev_arg=
+  fi
+
+  case "$arg" in
+      -*=*) optarg=`echo "$arg" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+      *) optarg= ;;
+  esac
+
+  case $arg in
+    -h | --help)
+      usage && exit 0
+      ;;
+    -r=* | --role=*)
+      VAULT_SSH_ROLENAME="$optarg"
+      ;;
+    -p=* | --pubkey=*)
+      PERSONAL_PUBKEY="$optarg"
+      VAULT_SSH_PUBKEY="${PERSONAL_PUBKEY%.*}-cert.pub"
+      ;;
+    -*)
+      echo "${red}Unknown option ${arg}, exiting...${reset}" && exit 1
+      ;;
+    *)
+      echo "${red}Unknown option or missing argument for ${arg}, exiting.${reset}"
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+vault-ssh
