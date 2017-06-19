@@ -49,6 +49,9 @@ Options:
   -p=, --pubkey=[public_key]
       Full path to your personal public key (defaults to ${HOME}/.ssh/id_rsa.pub). This is the
       only mandatory option.
+
+  -s=, --ssh="[ssh_connection]"
+      SSH connection either taken from ~/.ssh/config file, or specified manually.
 EOM
 }
 
@@ -61,7 +64,7 @@ vault-ssh() {
   echo ${VAULT_SSH_ROLENAME} > ${HOME}/.vault_ssh_role
   log "Using role ${VAULT_SSH_ROLENAME} to obtain signed Vault SSH key, ${VAULT_SSH_PUBKEY}, with public key ${PERSONAL_PUBKEY}"
   vault write -field signed_key ssh/sign/${VAULT_SSH_ROLENAME} public_key=@${PERSONAL_PUBKEY} > ${VAULT_SSH_PUBKEY}
-  chmod 0400 ${VAULT_SSH_PUBKEY}
+  chmod 0600 ${VAULT_SSH_PUBKEY}
 }
 
 ssh-conn() {
@@ -92,6 +95,9 @@ for arg in "$@"; do
       PERSONAL_PUBKEY="$optarg"
       VAULT_SSH_PUBKEY="${PERSONAL_PUBKEY%.*}-cert.pub"
       ;;
+    -s=* | --ssh=*)
+      SSH_CONN="$optarg"
+      ;;
     -*)
       echo "${red}Unknown option ${arg}, exiting...${reset}" && exit 1
       ;;
@@ -104,3 +110,4 @@ for arg in "$@"; do
 done
 
 vault-ssh
+[[ ! -z ${SSH_CONN} ]] && ssh-conn
