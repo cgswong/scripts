@@ -1,5 +1,91 @@
 #!/bin/bash
 # Simple script to authenticate to Vault server
 
-[[ -f ~/.vault-token ]] && rm ~/.vault-token > /dev/null
-vault auth -method=github token=${VAULT_AUTH_GITHUB_TOKEN}
+# Set values
+pkg=${0##*/}
+
+VAULT_AUTH=${VAULT_AUTH:-"ping"}
+
+# set colors
+red=$(tput setaf 1)
+green=$(tput setaf 2)
+yellow=$(tput setaf 3)
+blue=$(tput setaf 4)
+purple=$(tput setaf 5)
+cyan=$(tput setaf 6)
+white=$(tput setaf 7)
+reset=$(tput sgr0)
+
+log() {
+  # Write messages to screen
+  echo "$(date +"%F %T") [${pkg}] $1"
+}
+
+die() {
+  log "${red}[FAIL] $1${reset}" >&2 && return 1
+}
+
+usage() {
+cat <<EOM
+
+${pkg}
+
+SSH into remote host using Vault authentication.
+
+Usage: ${pkg} [options]
+
+Options:
+  -h, --help
+      Output help (this message)
+
+  -a=, --auth=[github | ping]
+      Provider to use for authentication. Defaults to "ping". Note that "github" is deprecated.
+EOM
+}
+
+vault-auth() {
+  # Authenticate to Vault, getting access tokens. Store the role for future usage.
+  [[ -f ~/.vault-token ]] && rm ~/.vault-token > /dev/null
+  log "Authenticating to Vault for ${USER} using ${VAULT_AUTH} method."
+  if [[ ${VAULT_AUTH} == "ping" ]]; then
+    vault auth -method=userpass -path=${VAULT_AUTH} username=${USER}
+  else
+    if [[ ! -z ${VAULT_AUTH_GITHUB_TOKEN} ]]; then
+      vault auth -method=${VAULT_AUTH} token=${VAULT_AUTH_GITHUB_TOKEN}
+    else
+      die "Missing value for environment variable VAULT_AUTH_GITHUB_TOKEN"
+    fi
+  fi
+}
+
+# Process command line
+for arg in "$@"; do
+  if test -n "$prev_arg"; then
+    eval "$prev_arg=\$arg"
+    prev_arg=
+  fi
+
+  case "$arg" in
+      -*=*) optarg=`echo "$arg" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+      *) optarg= ;;
+  esac
+
+  case $arg in
+    -h | --help)
+      usage && exit 0
+      ;;
+    -a=* | --auth=*)
+      VAULT_AUTH="$optarg"
+      ;;
+    -*)
+      echo "${red}Unknown option ${arg}, exiting...${reset}" && exit 1
+      ;;
+    *)
+      echo "${red}Unknown option or missing argument for ${arg}, exiting.${reset}"
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+vault-auth

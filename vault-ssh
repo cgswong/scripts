@@ -1,9 +1,6 @@
 #!/bin/bash
 # Simple script to SSH to remote server using Vault authentication.
 #
-# Usage:
-#    echo 'rolename' > ~/.vault_ssh_role
-#    vault-ssh -i ~/.ssh/some_privatekey user@host
 
 # Set values
 pkg=${0##*/}
