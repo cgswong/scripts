@@ -5,13 +5,61 @@ prg=${BASH_SOURCE##*/}
 SOCKS_PORT=${SOCKS_PORT:=9090}
 PID_FILE="/tmp/${prg}-${SOCKS_PORT}.pid"
 # These are taken from environment (check ~/.extra)
-##BASTION_KEYS=${BASTION_KEYS:="${HOME}/.aws/keys/local-kp.pem ${HOME}/.aws/keys/bastion-kp.pem"}
-##BASTION_CONN=${BASTION_CONN:="$(whoami)@bastion.com ec2-user@bastion.net"}
+BASTION_KEYS=${BASTION_KEYS:="${HOME}/.aws/keys/local-kp.pem ${HOME}/.aws/keys/bastion-kp.pem"}
+BASTION_CONN=${BASTION_CONN:="$(whoami)@bastion.com ec2-user@bastion.net"}
+
+# set colors
+red=$(tput setaf 1)
+green=$(tput setaf 2)
+yellow=$(tput setaf 3)
+blue=$(tput setaf 4)
+purple=$(tput setaf 5)
+cyan=$(tput setaf 6)
+white=$(tput setaf 7)
+reset=$(tput sgr0)
+
+log() {
+  # Write messages to screen
+  echo "$(date +"%F %T") [${pkg}] $1"
+}
+
+die() {
+  log "${red}[FAIL] $1${reset}" >&2 && return 1
+}
+
+usage() {
+cat <<EOM
+
+${pkg}
+
+Create SSH tunnel connection.
+
+Usage: ${pkg} [options]
+
+Options:
+  -h, --help
+      Output help (this message)
+
+  -c=, --conn=[connection_string]
+      SSH connection string to jumpbox/bastion host(s). For multiple jumpboxes space separate
+      in the order of connection and enclose in quotes.
+
+  -e, --end
+      End running SSH connection.
+
+  -k=, --keys=[bastion_keys]
+      SSH key(s) to use for connection to jumbox/bastion. Space separated, enclosed in quotes.
+      These get loaded into memory.
+
+  -s, --start
+      Start SSH connection (default).
+EOM
+}
 
 start_conn() {
   # Run some checks
   if [[ -f "${PID_FILE}" ]]; then
-    echo "Process file exists! Process ID: $(cat ${PID_FILE})"
+    die "Process file exists! Process ID: $(cat ${PID_FILE})"
     exit 1
   fi
 
@@ -20,10 +68,7 @@ start_conn() {
     ssh-add ${skey}
   done
 
-  # Create tunnel in background
-##  ssh -f -o ExitOnForwardFailure=yes -CND ${SOCKS_PORT} -J ${BASTION_CONN}
-##  autossh -M 0 -CND ${SOCKS_PORT} ${BASTION_CONN}
-##  PID=$!
+  # Create tunnel
   PID=$$
   echo ${PID} > ${PID_FILE}
   ssh -CND ${SOCKS_PORT} -J ${BASTION_CONN}
@@ -31,21 +76,57 @@ start_conn() {
 
 stop_conn() {
   if [[ -f "${PID_FILE}" ]]; then
-    echo "Killing ${prg} with PID $(cat ${PID_FILE})"
+    log "Killing ${prg} with PID $(cat ${PID_FILE})"
     pkill -SIGKILL -F ${PID_FILE}
     if [[ $? -ne 0 ]]; then
-      echo "Error killing process!"
+      die "Error killing process!"
       exit 1
     else
       rm ${PID_FILE}
     fi
   else
-    echo "No PID file found."
+    log "No PID file found."
   fi
 }
 
-if [[ $1 == "stop" ]]; then
-  stop_conn
-else
-  start_conn
-fi
+# Process command line
+for arg in "$@"; do
+  if test -n "$prev_arg"; then
+    eval "$prev_arg=\$arg"
+    prev_arg=
+  fi
+
+  case "$arg" in
+      -*=*) optarg=`echo "$arg" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+      *) optarg= ;;
+  esac
+
+  case $arg in
+    -h | --help)
+      usage && exit 0
+      ;;
+    -c=* | --conn=*)
+      BASTION_CONN="$optarg"
+      ;;
+    -e | --end)
+      stop_conn
+      exit 0
+      ;;
+    -k=* | --keys=*)
+      BASTION_KEYS="$optarg"
+      ;;
+    -s | --start)
+      SCONN_START=1
+      ;;
+    -*)
+      die "${red}Unknown option ${arg}, exiting...${reset}"
+      ;;
+    *)
+      log "${red}Unknown option or missing argument for ${arg}, exiting.${reset}"
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+[[ ! -z ${SCONN_START} ]] && start_conn
