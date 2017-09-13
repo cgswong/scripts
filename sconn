@@ -20,7 +20,7 @@ reset=$(tput sgr0)
 
 log() {
   # Write messages to screen
-  echo "$(date +"%F %T") [${pkg}] $1"
+  echo "$(date +"%F %T") [${prg}] $1"
 }
 
 die() {
@@ -30,11 +30,11 @@ die() {
 usage() {
 cat <<EOM
 
-${pkg}
+${prg}
 
 Create SSH tunnel connection.
 
-Usage: ${pkg} [options]
+Usage: ${prg} [options]
 
 Options:
   -h, --help
@@ -44,15 +44,9 @@ Options:
       SSH connection string to jumpbox/bastion host(s). For multiple jumpboxes space separate
       in the order of connection and enclose in quotes.
 
-  -e, --end
-      End running SSH connection.
-
   -k=, --keys=[bastion_keys]
       SSH key(s) to use for connection to jumbox/bastion. Space separated, enclosed in quotes.
       These get loaded into memory.
-
-  -s, --start
-      Start SSH connection (default).
 EOM
 }
 
@@ -65,28 +59,13 @@ start_conn() {
 
   # Load keys
   for skey in "${BASTION_KEYS}"; do
-    ssh-add ${skey}
+    log "${green}Adding SSH key(s): ${skey}${reset}"
+    ssh-add ${skey} &>/dev/null
   done
 
   # Create tunnel
-  PID=$$
-  echo ${PID} > ${PID_FILE}
-  ssh -CND ${SOCKS_PORT} -J ${BASTION_CONN}
-}
-
-stop_conn() {
-  if [[ -f "${PID_FILE}" ]]; then
-    log "Killing ${prg} with PID $(cat ${PID_FILE})"
-    pkill -SIGKILL -F ${PID_FILE}
-    if [[ $? -ne 0 ]]; then
-      die "Error killing process!"
-      exit 1
-    else
-      rm ${PID_FILE}
-    fi
-  else
-    log "No PID file found."
-  fi
+  log "${green}Creating SSH SOCKS tunnel using port ${SOCKS_PORT}.${reset}"
+  ssh -CND ${SOCKS_PORT} -J ${BASTION_CONN} &>/dev/null 
 }
 
 # Process command line
@@ -108,15 +87,8 @@ for arg in "$@"; do
     -c=* | --conn=*)
       BASTION_CONN="$optarg"
       ;;
-    -e | --end)
-      stop_conn
-      exit 0
-      ;;
     -k=* | --keys=*)
       BASTION_KEYS="$optarg"
-      ;;
-    -s | --start)
-      SCONN_START=1
       ;;
     -*)
       die "${red}Unknown option ${arg}, exiting...${reset}"
@@ -129,4 +101,4 @@ for arg in "$@"; do
   esac
 done
 
-[[ ! -z ${SCONN_START} ]] && start_conn
+start_conn
