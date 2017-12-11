@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#!/usr/bin/env bash
 # Create a Docker VM, including Swarm multi-host networked VMs.
 
 # Set values
@@ -17,52 +17,38 @@ reset=$(tput sgr0)
 machine-init() {
   # Build test VM if needed
   DOCKER_MACHINE_NAME=${DOCKER_MACHINE_NAME:-"citest"} ; export DOCKER_MACHINE_NAME
-  VIRTUALBOX_DISK_SIZE=${VIRTUALBOX_DISK_SIZE:-"10240"}
-#  export VIRTUALBOX_BOOT2DOCKER_URL=https://github.com/boot2docker/boot2docker/releases/download/v1.9.0/boot2docker.iso
+  VBOX_DISK_SIZE=${VBOX_DISK_SIZE:-"10240"} ; export VBOX_DISK_SIZE
 
-  docker-machine ls -q | grep "${DOCKER_MACHINE_NAME}" &>/dev/null
+  docker-machine ls --quiet | grep "${DOCKER_MACHINE_NAME}" &>/dev/null
   if [ $? -ne 0 ]; then
-    if [ ! -z $create_machine ]; then
+    if [ ! -z ${create_machine} ]; then
       echo "${red}Docker host (${DOCKER_MACHINE_NAME}) does not exist and auto-creation disabled. Exiting.${reset}"
       exit 2
     fi
     echo "${yellow}Creating Docker host (${DOCKER_MACHINE_NAME})...${reset}"
     if [ -z $DOCKER_MACHINE_NODES ] || [ $DOCKER_MACHINE_NODES -lt 2 ]; then
-      docker-machine create -d virtualbox --virtualbox-disk-size ${VIRTUALBOX_DISK_SIZE} ${DOCKER_MACHINE_NAME}
+      docker-machine create --driver virtualbox --virtualbox-disk-size ${VBOX_DISK_SIZE} ${DOCKER_MACHINE_NAME}
     else
-      # Provision KV-store machine
-      echo "${yellow}Creating Docker multi-host kv-store (${DOCKER_MACHINE_NAME}-kvs)...${reset}"
-      docker-machine create -d virtualbox ${DOCKER_MACHINE_NAME}-kvs
+      # Provision Swarm Manager and get token
+      echo "${yellow}Creating Docker Swarm Manager (${DOCKER_MACHINE_NAME}-mgr)...${reset}"
+      docker-machine create --driver virtualbox ${DOCKER_MACHINE_NAME}-mgr
+      SWARM_MGR_ADDR=$(docker-machine ip ${DOCKER_MACHINE_NAME}-mgr) ; export SWARM_MGR_ADDR
+      docker-machine ssh ${DOCKER_MACHINE_NAME}-mgr "docker swarm init --advertise-addr ${SWARM_MGR_ADDR}" &>/dev/null
+      SWARM_MGR_TOKEN=$(docker-machine ssh ${DOCKER_MACHINE_NAME}-mgr "docker swarm join-token worker --quiet") ; export SWARM_MGR_TOKEN
 
-      # Run distributed key-value store for multi-host networking to work
-      echo "${yellow}Running Consul on (${DOCKER_MACHINE_NAME}-kvs)...${reset}"
-      docker $(docker-machine config ${DOCKER_MACHINE_NAME}-kvs) run -d -p "8500:8500" -h "consul" --name consul progrium/consul -server -bootstrap
-
-      # Create swarm cluster
-      echo "${yellow}Creating Docker Swarm master host (${DOCKER_MACHINE_NAME}-00)...${reset}"
-      docker-machine create -d virtualbox \
-        --swarm --swarm-master \
-        --swarm-discovery="consul://$(docker-machine ip ${DOCKER_MACHINE_NAME}-kvs):8500" \
-        --engine-opt="cluster-store=consul://$(docker-machine ip ${DOCKER_MACHINE_NAME}-kvs):8500" \
-        --engine-opt="cluster-advertise=eth1:2376" \
-        ${DOCKER_MACHINE_NAME}-00
-
+      # Create Swarm Worker nodes
       for ((i=1; i<=${DOCKER_MACHINE_NODES}; i++)); do
         echo "${yellow}Creating Docker Swarm node (${DOCKER_MACHINE_NAME}-${i})...${reset}"
-        docker-machine create -d virtualbox \
-          --virtualbox-disk-size ${VIRTUALBOX_DISK_SIZE} \
-          --swarm \
-          --swarm-discovery="consul://$(docker-machine ip ${DOCKER_MACHINE_NAME}-kvs):8500" \
-          --engine-opt="cluster-store=consul://$(docker-machine ip ${DOCKER_MACHINE_NAME}-kvs):8500" \
-          --engine-opt="cluster-advertise=eth1:2376" \
+        docker-machine create --driver virtualbox \
+          --virtualbox-disk-size ${VBOX_DISK_SIZE} \
           ${DOCKER_MACHINE_NAME}-${i}
+        echo ${SWARM_MGR_TOKEN}
+        docker-machine ssh ${DOCKER_MACHINE_NAME}-${i} "docker swarm join --token ${SWARM_MGR_TOKEN} ${SWARM_MGR_ADDR}:2377"
       done
 
-      eval $(docker-machine env --swarm ${DOCKER_MACHINE_NAME}-00)
-
       # Create overlay network
-      echo "${yellow}Creating Docker multi-host network (mh-net)...${reset}"
-      docker network create --driver overlay mh-net
+      echo "${yellow}Creating Docker Overlay multi-host network (${DOCKER_MACHINE_NAME}-net)...${reset}"
+      docker-machine ssh ${DOCKER_MACHINE_NAME}-mgr "docker network create --driver overlay --subnet 172.16.0.0/28 ${DOCKER_MACHINE_NAME}-net"
     fi
   else
     docker-machine ls | grep ${DOCKER_MACHINE_NAME} | grep Running &>/dev/null
@@ -71,9 +57,13 @@ machine-init() {
       docker-machine start ${DOCKER_MACHINE_NAME}
     fi
   fi
-  eval "$(docker-machine env ${DOCKER_MACHINE_NAME})"
 }
 
+cleanup() {
+  unset SWARM_MGR_ADDR
+  unset SWARM_MGR_TOKEN
+  unset VBOX_DISK_SIZE
+}
 usage() {
 cat <<EOM
 
@@ -87,9 +77,9 @@ Options:
   -h,--help               Output help (this message)
   -nc,--no-create         Do not create Docker VM host
   -m=,--machine=[NAME]    Use specified name for Docker VM host (default 'citest')
-  -n=,--nodes=[#]        Create specified number of nodes in multi-host configuration.
+  -n=,--nodes=[#]         Create specified number of nodes in multi-host configuration.
                           Hosts names will be in the format '[machine name]-#'
-  -s=,--size=[MB]         Use specified value in MB for Docker VM HDD (defaults to 10240)
+  -s=,--size=[MB]         Use specified value in MB for Docker VM storage (defaults to 10240)
 
 EOM
 }
@@ -120,7 +110,7 @@ for arg in "$@"; do
       DOCKER_MACHINE_NODES="$optarg"
       ;;
     -s=* | --size=*)
-      VIRTUALBOX_DISK_SIZE="$optarg"
+      VBOX_DISK_SIZE="$optarg"
       ;;
     -*)
       echo "${red}Unknown option $arg, exiting...${reset}" && exit 1
@@ -134,3 +124,4 @@ for arg in "$@"; do
 done
 
 machine-init
+cleanup
