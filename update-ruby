@@ -1,6 +1,9 @@
 #!/bin/bash
 # Update all ruby gems and bundles
 
-sudo -H gem update --system
-gem update
-##sudo bundle update
+for ver in $(rbenv versions --bare); do
+  RBENV_VERSION=${ver}
+  ruby --version
+  gem update --system
+  gem update
+done

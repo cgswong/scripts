@@ -1,5 +1,8 @@
 #!/bin/bash
 # Update all pip installations
 
-##pip freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs sudo -H pip install -U
-pip freeze --local | grep -v '^\-e' | cut -d = -f 1  | xargs pip install -U
+for ver in $(pyenv versions --bare --skip-aliases | egrep -v '/'); do
+  PYENV_VERSION=${ver}
+  python -V
+  pip install --upgrade $(pip list --outdated --format=legacy | awk '{print $1}')
+done
