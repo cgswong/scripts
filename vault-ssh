@@ -56,7 +56,7 @@ vault-ssh() {
   # Authenticate to Vault, getting access tokens. Store the role for future usage.
   if [[ ! $(vault token-lookup >/dev/null 2>&1) ]]; then
     log "Authenticating to Vault for ${USER}"
-    vault auth -method=userpass -path=ping username=${USER}
+    vault login -method=userpass -path=ping username=${USER}
   fi
   echo ${VAULT_SSH_ROLENAME} > ${HOME}/.vault_ssh_role
   log "Using role ${VAULT_SSH_ROLENAME} to obtain signed Vault SSH key, ${VAULT_SSH_PUBKEY}, with public key ${PERSONAL_PUBKEY}"
