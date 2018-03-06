@@ -4,6 +4,6 @@
 for ver in $(rbenv versions --bare); do
   RBENV_VERSION=${ver}
   ruby --version
-  gem update --system
-  gem update
+  gem update --system --no-rdoc --no-ri
+  gem update --no-rdoc --no-ri
 done
