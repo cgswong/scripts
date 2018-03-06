@@ -7,7 +7,7 @@
 # json: good for processing with `jq`
 # text: (recommended with --query option) good for processing with *nix tools (tab-delimited)
 # table: can be a bit more human readable
-: ${AWS_DEFAULT_OUTPUT:="table"}
+: ${AWS_DEFAULT_OUTPUT:="json"}
 : ${AWS_CONFIG_FILE:="${HOME}/.aws/config"}
 : ${AWS_CREDENTIAL_FILE:="${HOME}/.aws/credentials"}
 : ${AWS_DEFAULT_REGION:="us-east-1"}
