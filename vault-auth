@@ -48,10 +48,10 @@ vault-auth() {
   [[ -f ~/.vault-token ]] && rm ~/.vault-token > /dev/null
   log "Authenticating to Vault for ${USER} using ${VAULT_AUTH} method."
   if [[ ${VAULT_AUTH} == "ping" ]]; then
-    vault auth -method=userpass -path=${VAULT_AUTH} username=${USER}
+    vault login -method=userpass -path=${VAULT_AUTH} username=${USER}
   else
     if [[ ! -z ${VAULT_AUTH_GITHUB_TOKEN} ]]; then
-      vault auth -method=${VAULT_AUTH} token=${VAULT_AUTH_GITHUB_TOKEN}
+      vault login -method=${VAULT_AUTH} token=${VAULT_AUTH_GITHUB_TOKEN}
     else
       die "Missing value for environment variable VAULT_AUTH_GITHUB_TOKEN"
     fi
