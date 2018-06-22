@@ -4,5 +4,5 @@
 for ver in $(pyenv versions --bare --skip-aliases | egrep -v '/'); do
   PYENV_VERSION=${ver}
   python -V
-  pip install --upgrade $(pip list --outdated --format=legacy | awk '{print $1}')
+  pip install --upgrade $(pip list --outdated | awk '{print $1}')
 done
