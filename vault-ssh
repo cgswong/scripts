@@ -44,11 +44,7 @@ Options:
       Name of Vault role to use (defaults to 'monuser'). Leave this as the default.
 
   -p=, --pubkey=[public_key]
-      Full path to your personal public key (defaults to ${HOME}/.ssh/id_rsa.pub). This is the
-      only mandatory option.
-
-  -s=, --ssh="[ssh_connection]"
-      SSH connection either taken from ~/.ssh/config file, or specified manually.
+      Full path to your personal public key (defaults to ${HOME}/.ssh/id_rsa.pub).
 EOM
 }
 
@@ -58,11 +54,13 @@ vault-ssh() {
     read -s -p 'Enter your Bayer password to authenticate with Vault: ' NET_PWD
     echo ''
     vault login -method=userpass -path=ping username=${USER} password="${NET_PWD}" &>/dev/null
+    [[ $? -ne 0 ]] && die "Please resolve the error above and try again."
     unset NET_PWD
   fi
   echo ${VAULT_SSH_ROLENAME} > ${HOME}/.vault_ssh_role
   log "Using role ${VAULT_SSH_ROLENAME} to obtain signed Vault SSH key, ${VAULT_SSH_PUBKEY}, with public key ${PERSONAL_PUBKEY}"
   vault write -field signed_key ssh/sign/${VAULT_SSH_ROLENAME} public_key=@${PERSONAL_PUBKEY} > ${VAULT_SSH_PUBKEY}
+  [[ $? -ne 0 ]] && die "Please resolve the error above and try again."
   chmod 0600 ${VAULT_SSH_PUBKEY}
 }
 
