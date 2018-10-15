@@ -51,7 +51,7 @@ EOM
 vault-ssh() {
   # Authenticate to Vault, getting access tokens. Store the role for future usage.
   if [[ ! $(vault token-lookup >/dev/null 2>&1) ]]; then
-    read -s -p 'Enter your Bayer password to authenticate with Vault: ' NET_PWD
+    read -s -p 'Enter your company password to authenticate with Vault: ' NET_PWD
     echo ''
     vault login -method=userpass -path=ping username=${USER} password="${NET_PWD}" &>/dev/null
     [[ $? -ne 0 ]] && die "Please resolve the error above and try again."
