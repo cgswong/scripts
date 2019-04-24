@@ -1,14 +1,15 @@
 #!/bin/bash
 # SSH auto completer
 
-_complete_ssh_hosts ()
+_ssh ()
 {
+  local cur hosts
   COMPREPLY=()
   cur="${COMP_WORDS[COMP_CWORD]}"
-  comp_ssh_hosts=$(cat ~/.ssh/config ~/.ssh/conf.d/*.ssh | \
+  hosts=$(cat ~/.ssh/config ~/.ssh/conf.d/*.ssh | \
                   grep "^Host " | grep -v '\*' | uniq | \
                   awk '{print $2}')
-  COMPREPLY=( $(compgen -W "${comp_ssh_hosts}" -- $cur))
+  COMPREPLY=( $(compgen -W "${hosts}" -- ${cur}))
   return 0
 }
-complete -F _complete_ssh_hosts ssh
+complete -F _ssh ssh
