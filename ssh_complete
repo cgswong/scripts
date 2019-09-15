@@ -3,11 +3,12 @@
 
 _ssh ()
 {
-  local cur hosts
+  local cur prev hosts
   COMPREPLY=()
   cur="${COMP_WORDS[COMP_CWORD]}"
-  hosts=$(cat ~/.ssh/config ~/.ssh/conf.d/*.ssh | \
-                  grep "^Host " | grep -v '\*' | uniq | \
+  prev="${COMP_WORDS[COMP_CWORD-1]}"
+  hosts=$(grep '^Host' ~/.ssh/config ~/.ssh/conf.d/*.ssh 2>/dev/null | \
+                  grep -v '\*' | uniq | \
                   awk '{print $2}')
   COMPREPLY=( $(compgen -W "${hosts}" -- ${cur}))
   return 0
