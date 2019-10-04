@@ -2,7 +2,8 @@
 # Update all pip installations
 
 for ver in $(pyenv versions --bare --skip-aliases | egrep -v '/'); do
-  PYENV_VERSION=${ver}
+  export PYENV_VERSION=${ver}
   python -V
-  pip install --upgrade $(pip list --outdated | awk '{print $1}')
+  pip install --upgrade $(pip list --outdated --format freeze | cut -d '=' -f1)
 done
+unset PYENV_VERSION
