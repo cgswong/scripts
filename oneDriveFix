@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-# Bug fix for cleaning up Microsoft OneDrive for Mac droppings
-
-rm -rf ~/Library/Group\ Containers/UBF8T346G9.Office/Microsoft/AppData/Microsoft/Office/15.0/OfficeFileCache/*

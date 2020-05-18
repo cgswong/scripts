@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-# Configure local Kubernetes client, kubectl, to access local Vagrant Kubernetes.
-
-: ${K8_REPO:="~/repos/git/coreos-kubernetes/multi-node/vagrant"}
-: ${K8_TGT:="vagrant-multi"}
-
-export KUBECONFIG="${KUBECONFIG}:${K8_REPO}/kubeconfig"
-kubectl config use-context ${K8_TGT}

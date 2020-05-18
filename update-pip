@@ -4,6 +4,7 @@
 for ver in $(pyenv versions --bare --skip-aliases | egrep -v '/'); do
   export PYENV_VERSION=${ver}
   python -V
-  pip install --upgrade $(pip list --outdated --format freeze | cut -d '=' -f1)
+  pip list --outdated --not-required --format freeze | sed 's/==/>=/' > /tmp/requirements-${ver}.txt
+  pip install --upgrade -f /tmp/requirements-${ver}.txt
 done
 unset PYENV_VERSION
