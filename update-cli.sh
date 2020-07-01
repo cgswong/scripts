@@ -32,3 +32,16 @@ AWS_CLI_VERSION=$(aws --version | cut -d '/' -f2 | cut -d' ' -f1)
 echo "New 'aws' version: ${AWS_CLI_VERSION}"
 unset AWS_CLI_VERSION
 
+# Update istioctl
+ISTIOCLI_VERSION=$(istioctl version --short --remote=false)
+echo "Current 'istioctl' version: ${ISTIOCLI_VERSION}"
+cd ${HOME}
+curl -sL https://istio.io/downloadIstio | sh -
+ISTIOCLI_NEW_VERSION=$(ls -td ${HOME}/istio-* | head -1 | cut -d'-' -f2)
+sudo ln -sf ${HOME}/istio-${ISTIOCLI_NEW_VERSION}/bin/istioctl /usr/local/bin/istioctl
+ISTIOCLI_VERSION=$(istioctl version --short --remote=false)
+echo "New 'istioctl' version: ${ISTIOCLI_VERSION}"
+cd -
+unset ISTIOCLI_NEW_VERSION
+unset ISTIOCLI_VERSION
+
