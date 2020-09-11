@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Update various CLI
+# Version: 1.0.0
 
 # Update `eksctl`
 echo "Updating 'eksctl'..."
