@@ -13,25 +13,11 @@
 : ${AWS_DEFAULT_REGION:="us-east-1"}
 
 prg=${BASH_SOURCE##*/}
-prg_version="0.1.0"
-
-# set colors
-red=$(tput setaf 1)
-green=$(tput setaf 2)
-yellow=$(tput setaf 3)
-blue=$(tput setaf 4)
-purple=$(tput setaf 5)
-cyan=$(tput setaf 6)
-white=$(tput setaf 7)
-reset=$(tput sgr0)
+prg_version="1.1.0"
 
 log() {
   # Write messages to screen
   echo "$(date +"%F %T") [${prg}] $1"
-}
-
-die() {
-  log "${red}[FAIL] $1${reset}" >&2 && return 1
 }
 
 usage() {
@@ -98,8 +84,8 @@ for arg in "$@"; do
   fi
 
   case "$arg" in
-      -*=*) optarg=`echo "$arg" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
-      *) optarg= ;;
+    -*=*) optarg=`echo "$arg" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+    *) optarg= ;;
   esac
 
   case $arg in
@@ -110,8 +96,9 @@ for arg in "$@"; do
       version && exit 0
       ;;
     -*)
-      die "${red}Unknown option ${arg}, exiting...${reset}"
-      ;;
+      log "Error - Unknown option ${arg}. Exiting."
+      exit 1
+    ;;
   esac
 done
 
