@@ -31,7 +31,19 @@ KUBE_VERSION=$(kubectl version --short --client | cut -d':' -f2)
 echo "New 'kubectl' version: ${KUBE_VERSION}"
 unset KUBE_VERSION
 
+# Install kubectl krew package manager
+echo "Updating 'krew' the 'kubectl' package manager..."
+(
+  cd "$(mktemp -d)" &&
+  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/krew.tar.gz" &&
+  tar zxf krew.tar.gz &&
+  KREW=./krew-"$(uname | tr '[:upper:]' '[:lower:]')_amd64" &&
+  "$KREW" install krew
+)
+echo "Completed 'krew' installation."
+
 # Update AWS CLI
+echo "Updating AWS CLI..."
 if command -v aws &>/dev/null; then
   AWS_CLI_VERSION=$(aws --version | cut -d '/' -f2 | cut -d' ' -f1)
   echo "Current 'aws' version: ${AWS_CLI_VERSION}"
@@ -49,7 +61,7 @@ echo "New 'aws' version: ${AWS_CLI_VERSION}"
 unset AWS_CLI_VERSION
 
 # Update aws-session-manager-plugin
-echo "Installing 'aws-sessionmanager-plugin'"
+echo "Updating 'aws-sessionmanager-plugin'"
 if [[ $(uname -s) == "Darwin" ]]; then
   curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip" -o "/tmp/sessionmanager-bundle.zip"
   unzip -q /tmp/sessionmanager-bundle.zip -d /tmp
@@ -62,14 +74,20 @@ fi
 echo "Completed 'aws-sessionmanager-plugin' installation"
 
 # Update istioctl
+echo "Updating Istio CLI..."
 if command -v istioctl &>/dev/null; then
   ISTIOCLI_VERSION=$(istioctl version --short --remote=false)
   echo "Current 'istioctl' version: ${ISTIOCLI_VERSION}"
 fi
-cd ${HOME}
+cd /tmp
 curl -sL https://istio.io/downloadIstio | sh -
-ISTIOCLI_NEW_VERSION=$(ls -td ${HOME}/istio-* | head -1 | cut -d'-' -f2)
-sudo ln -sf ${HOME}/istio-${ISTIOCLI_NEW_VERSION}/bin/istioctl /usr/local/bin/istioctl
+ISTIOCLI_NEW_VERSION=$(curl -sL https://github.com/istio/istio/releases | \
+                  grep -o 'releases/[0-9]*.[0-9]*.[0-9]*/' | sort --version-sort | \
+                  tail -1 | awk -F'/' '{ print $2}')
+sudo rm -rf /usr/local/istio-${ISTIOCLI_NEW_VERSION}
+sudo mv -f /tmp/istio-${ISTIOCLI_NEW_VERSION} /usr/local/
+#ISTIOCLI_NEW_VERSION=$(ls -td /usr/local/istio-* | head -1 | cut -d'-' -f2)
+sudo ln -sf /usr/local/istio-${ISTIOCLI_NEW_VERSION}/bin/istioctl /usr/local/bin/istioctl
 ISTIOCLI_VERSION=$(istioctl version --short --remote=false)
 echo "New 'istioctl' version: ${ISTIOCLI_VERSION}"
 cd -
